@@ -1,5 +1,7 @@
 import { DatabaseError, listConcessions } from "../../../lib/db";
 
+export const runtime = "nodejs";
+
 export async function GET() {
   try {
     const concessions = await listConcessions();

@@ -37,6 +37,7 @@ No se hacen reintentos automáticos de `PUT`. Una respuesta `2xx` significa que 
 ## Desarrollo
 
 ```bash
+nvm use 22
 npm install
 npm run dev
 npm test

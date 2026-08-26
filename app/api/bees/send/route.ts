@@ -3,6 +3,8 @@ import { DatabaseError, getConcessionCredentials } from "../../../../lib/db";
 import { runItemIngestion } from "../../../../lib/ingestion";
 import { type ItemV2, validateItems } from "../../../../lib/items-v2";
 
+export const runtime = "nodejs";
+
 const MAX_ITEMS = 5_000;
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

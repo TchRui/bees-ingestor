@@ -31,8 +31,8 @@ export function createConcessionRepository(query: Query) {
       `, []);
 
       return result.rows.map((row) => ({
-        vendorId: String(row.vendor_id),
-        name: String(row.name),
+        vendorId: String(row.vendor_id).trim(),
+        name: String(row.name).trim(),
       }));
     },
 
@@ -51,12 +51,12 @@ export function createConcessionRepository(query: Query) {
         if (!String(row[field] ?? "").trim()) throw new DatabaseError("La concesión seleccionada tiene credenciales incompletas.", 422);
       }
       return {
-        vendorId: String(row.vendor_id),
-        name: String(row.vendor_id),
-        tokenUrl: String(row.url_token),
-        serviceUrl: String(row.url_service),
-        clientId: String(row.client_id),
-        clientSecret: String(row.client_secret),
+        vendorId: String(row.vendor_id).trim(),
+        name: String(row.vendor_id).trim(),
+        tokenUrl: String(row.url_token).trim(),
+        serviceUrl: String(row.url_service).trim(),
+        clientId: String(row.client_id).trim(),
+        clientSecret: String(row.client_secret).trim(),
       };
     },
   };
