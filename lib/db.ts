@@ -21,20 +21,14 @@ export class DatabaseError extends Error {
   }
 }
 
-export function createConcessionRepository(query: Query, environment = "PROD") {
+export function createConcessionRepository(query: Query) {
   return {
     async list(): Promise<Concession[]> {
       const result = await query(`
-        SELECT DISTINCT wm.vendor_id, wm.name
+        SELECT wm.vendor_id, wm.name
         FROM marketplace_mx.wholesaler_mkt AS wm
-        INNER JOIN mexico.wholesalers_auth AS wa ON wa.vendor_id = wm.vendor_id
-        WHERE UPPER(COALESCE(wa.environment, '')) = UPPER($1)
-          AND NULLIF(TRIM(wa.url_token), '') IS NOT NULL
-          AND NULLIF(TRIM(wa.client_id), '') IS NOT NULL
-          AND NULLIF(TRIM(wa.client_secret), '') IS NOT NULL
-          AND NULLIF(TRIM(wa.url_service), '') IS NOT NULL
         ORDER BY wm.name, wm.vendor_id
-      `, [environment]);
+      `, []);
 
       return result.rows.map((row) => ({
         vendorId: String(row.vendor_id),
@@ -44,24 +38,21 @@ export function createConcessionRepository(query: Query, environment = "PROD") {
 
     async credentials(vendorId: string): Promise<ConcessionCredentials> {
       const result = await query(`
-        SELECT wm.vendor_id, wm.name, wa.url_token, wa.client_id, wa.client_secret, wa.url_service
-        FROM marketplace_mx.wholesaler_mkt AS wm
-        INNER JOIN mexico.wholesalers_auth AS wa ON wa.vendor_id = wm.vendor_id
-        WHERE wm.vendor_id = $1
-          AND UPPER(COALESCE(wa.environment, '')) = UPPER($2)
-          AND NULLIF(TRIM(wa.url_token), '') IS NOT NULL
-          AND NULLIF(TRIM(wa.client_id), '') IS NOT NULL
-          AND NULLIF(TRIM(wa.client_secret), '') IS NOT NULL
-          AND NULLIF(TRIM(wa.url_service), '') IS NOT NULL
+        SELECT vendor_id, url_token, client_id, client_secret, url_service
+        FROM mexico.wholesalers_auth
+        WHERE vendor_id = $1
         LIMIT 2
-      `, [vendorId, environment]);
+      `, [vendorId]);
 
-      if (result.rows.length === 0) throw new DatabaseError("La concesión seleccionada no tiene credenciales PROD completas.", 404);
-      if (result.rows.length > 1) throw new DatabaseError("La concesión tiene más de una configuración PROD activa.", 409);
+      if (result.rows.length === 0) throw new DatabaseError("La concesión seleccionada no tiene credenciales configuradas.", 404);
+      if (result.rows.length > 1) throw new DatabaseError("La concesión tiene más de una configuración activa.", 409);
       const row = result.rows[0];
+      for (const field of ["url_token", "client_id", "client_secret", "url_service"] as const) {
+        if (!String(row[field] ?? "").trim()) throw new DatabaseError("La concesión seleccionada tiene credenciales incompletas.", 422);
+      }
       return {
         vendorId: String(row.vendor_id),
-        name: String(row.name),
+        name: String(row.vendor_id),
         tokenUrl: String(row.url_token),
         serviceUrl: String(row.url_service),
         clientId: String(row.client_id),
@@ -72,15 +63,29 @@ export function createConcessionRepository(query: Query, environment = "PROD") {
 }
 
 function databaseConfig() {
-  const connectionString = process.env.DATABASE_URL;
-  const caValue = process.env.DB_CA_CERT;
-  if (!connectionString) throw new DatabaseError("Falta configurar DATABASE_URL en el servidor.");
-  if (!caValue) throw new DatabaseError("Falta configurar DB_CA_CERT en el servidor.");
+  const user = process.env.DB_USER;
+  const host = process.env.DB_HOST;
+  const database = process.env.BD_DATABASE || process.env.DB_DATABASE;
+  const password = process.env.DB_PASSWORD;
+  const missing = [
+    ["DB_USER", user],
+    ["DB_HOST", host],
+    ["BD_DATABASE", database],
+    ["DB_PASSWORD", password],
+  ].filter(([, value]) => !value).map(([key]) => key);
+  if (missing.length) throw new DatabaseError(`Falta configurar ${missing.join(", ")} en el servidor.`);
 
-  const ca = caValue === "system" ? undefined : caValue.replace(/\\n/g, "\n");
+  const caValue = process.env.DB_CA_CERT;
+  const ssl = caValue
+    ? { ca: caValue.replace(/\\n/g, "\n"), rejectUnauthorized: true }
+    : { rejectUnauthorized: false };
   return {
-    connectionString,
-    ssl: ca ? { ca, rejectUnauthorized: true } : { rejectUnauthorized: true },
+    user,
+    host,
+    database,
+    password,
+    port: Number(process.env.DB_PORT || 5432),
+    ssl,
     connectionTimeoutMillis: 10_000,
     query_timeout: 12_000,
   };
@@ -92,7 +97,6 @@ async function withRepository<T>(operation: (repository: ReturnType<typeof creat
     await client.connect();
     const repository = createConcessionRepository(
       async (text, values) => client.query(text, values),
-      process.env.BEES_ENVIRONMENT || "PROD",
     );
     return await operation(repository);
   } catch (error) {

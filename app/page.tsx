@@ -85,7 +85,7 @@ export default function Home() {
       const data = await response.json() as { concessions?: Concession[]; message?: string };
       if (!response.ok) throw new Error(data.message || "No se pudieron consultar las concesiones.");
       setConcessions(data.concessions ?? []);
-      if (!data.concessions?.length) setConcessionError("No hay concesiones PROD con credenciales completas.");
+      if (!data.concessions?.length) setConcessionError("No hay concesiones registradas en wholesaler_mkt.");
     } catch (error) {
       setConcessionError(error instanceof Error ? error.message : "No se pudieron consultar las concesiones.");
     } finally {
@@ -273,7 +273,7 @@ export default function Home() {
                 {concessionError && <p className="field-error">{concessionError}</p>}
               </section>
 
-              <div className="action-bar"><div className="action-status">{errors.length ? <AlertCircle size={18} /> : selectedConcession ? <CheckCircle2 size={18} /> : <Server size={18} />}<div><strong>{errors.length ? "Corrige el Excel" : selectedConcession ? `${selectedConcession.name} seleccionada` : "Selecciona la concesión"}</strong><small>{errors.length ? "Carga una versión corregida para continuar" : selectedConcession ? `${Math.ceil(items.length / 50)} bloques secuenciales listos` : "Solo se muestran accesos PROD completos"}</small></div></div>{errors.length ? <button className="secondary-button" type="button" onClick={() => fileInput.current?.click()}><RefreshCw size={17} /> Reemplazar archivo</button> : <button className="primary-button" type="button" onClick={() => setConfirmOpen(true)} disabled={!canSend || busy}><Send size={18} /> Enviar {items.length} items <ArrowRight size={17} /></button>}<input ref={fileInput} className="hidden-file" type="file" accept=".xlsx,.xls" onChange={onFileChange} /></div>
+              <div className="action-bar"><div className="action-status">{errors.length ? <AlertCircle size={18} /> : selectedConcession ? <CheckCircle2 size={18} /> : <Server size={18} />}<div><strong>{errors.length ? "Corrige el Excel" : selectedConcession ? `${selectedConcession.name} seleccionada` : "Selecciona la concesión"}</strong><small>{errors.length ? "Carga una versión corregida para continuar" : selectedConcession ? `${Math.ceil(items.length / 50)} bloques secuenciales listos` : "Concesiones registradas en wholesaler_mkt"}</small></div></div>{errors.length ? <button className="secondary-button" type="button" onClick={() => fileInput.current?.click()}><RefreshCw size={17} /> Reemplazar archivo</button> : <button className="primary-button" type="button" onClick={() => setConfirmOpen(true)} disabled={!canSend || busy}><Send size={18} /> Enviar {items.length} items <ArrowRight size={17} /></button>}<input ref={fileInput} className="hidden-file" type="file" accept=".xlsx,.xls" onChange={onFileChange} /></div>
             </>
           )}
         </section>

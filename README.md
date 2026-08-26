@@ -6,9 +6,12 @@ Aplicación privada para validar archivos Excel con el contrato `ITEMS v2`, sele
 
 Requiere Node.js 22.13 o posterior y estas variables del servidor:
 
-- `DATABASE_URL`: conexión TLS a PostgreSQL.
-- `DB_CA_CERT`: certificado CA PEM (admite `\n` escapados) o `system` si la CA ya es confiable para el sistema.
-- `BEES_ENVIRONMENT=PROD`: entorno autorizado para consultar credenciales.
+- `DB_USER`: usuario de PostgreSQL.
+- `DB_HOST`: servidor PostgreSQL.
+- `BD_DATABASE`: base de datos. También se admite `DB_DATABASE` por compatibilidad con el repositorio anterior.
+- `DB_PASSWORD`: contraseña de PostgreSQL.
+- `DB_PORT`: opcional; utiliza `5432` por defecto.
+- `DB_CA_CERT`: opcional; certificado CA PEM para verificar la identidad TLS del servidor.
 - `SITE_URL`: URL pública usada por los metadatos.
 
 El navegador recibe únicamente `{vendorId, name}`. `client_secret`, URLs privadas, token y conexión PostgreSQL permanecen en el servidor.
@@ -24,8 +27,8 @@ Los SKU se normalizan a 18 dígitos. Los booleanos aceptan `TRUE/FALSE`, `VERDAD
 ## Flujo
 
 1. El navegador lee la primera hoja, transforma los datos y muestra errores o advertencias.
-2. `GET /api/concessions` consulta concesiones con credenciales PROD completas.
-3. `POST /api/bees/send` vuelve a consultar las credenciales, obtiene un token y envía bloques de 50 en orden.
+2. `GET /api/concessions` lista `vendor_id` y `name` desde `marketplace_mx.wholesaler_mkt`.
+3. `POST /api/bees/send` consulta las credenciales en `mexico.wholesalers_auth`, obtiene un token y envía bloques de 50 en orden.
 4. Los errores 4xx de validación permiten continuar; `401`, `403`, `429`, errores de red y `5xx` detienen los bloques pendientes.
 5. La respuesta lista cada `requestTraceId` y genera el enlace filtrado de BEES One.
 
